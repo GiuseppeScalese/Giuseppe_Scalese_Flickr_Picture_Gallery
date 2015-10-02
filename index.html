@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flickr London photos gallery Test</title>
+
+<!--[if lt IE 9]>
+<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js">
+</script>
+<![endif]-->
+
+<!-- Internet Explorer 8 or older versions doesn't support CSS3 media queries. I enable it by importing css3-mediaqueries.js Javascript file. -->
+<!--[if lt IE 9]>
+    <script src="http://css3-mediaqueries-js.googlecode.com/svn/trunk/css3-mediaqueries.js"></script>
+<![endif]-->  
+
+<!-- importing custom css -->
+<link rel="stylesheet" href="./css/style.css"/>
+
+<!-- importing google fonts -->
+<link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700|Droid+Serif:400,700,400italic,700italic' rel='stylesheet' type='text/css' />
+
+<script type="text/javascript">
+
+  //run on page load this anonymous function in order to create automatically the script mark-up and retrieve the JSON data
+  (function(){
+
+    //callback function of the above Flickr service call
+    function cb(data){
+
+        //check if the returned data is not empty
+        if ( data['items'].length < 1 ) {
+            // it's empty - show error message on screen
+            document.getElementById('wrapper').innerHTML += '<div class="errorMessage"><span>An error has occured while retrieving data.</span></div>';
+        }
+        else{
+          //loop through the returned array with data
+          for (var i=0 ; i<data['items'].length; i++){
+            
+            //retrieve data from array and push it into the DOM
+            var item = data['items'][i];
+            var imageURL = item.media.m;
+            var imageTag = document.createElement('img');
+            var imageContainer = document.createElement('div');
+            var imageCaption = document.createElement('div');
+
+            imageContainer.className = "imageContainer";
+            imageTag.setAttribute('src', imageURL);
+            imageTag.setAttribute('alt', item.title);
+            imageTag.className = "image";
+            imageCaption.className = "imageCaption";
+
+            imageContainer.appendChild(imageTag);
+            imageContainer.appendChild(imageCaption);
+            imageCaption.innerHTML += item.title;
+
+            //push the created HTML into the DOM
+            document.getElementById('wrapper').appendChild(imageContainer);
+          }
+          //call this function so as to reimport(and reselect) the previously selected images - if any
+          reimportSelectedItems();
+      }
+
+
+      //attach click listener event to wrapper
+      var clickTarget =  document.getElementById("wrapper");
+
+      //addEventListener doesn't work in IE8 - so we need to use "attachEvent" to bind the click
+      //if IE9 included or any other browser 
+      if (clickTarget.addEventListener) {
+          clickTarget.addEventListener("click", handleClickEvent, false);
+      }
+      else { //if IE8 included  or earlier IE browsers 
+          clickTarget.attachEvent("onclick", handleClickEvent);
+      }
+
+      //click listener - handles click img event
+      function handleClickEvent(evt) {
+
+         //we use either the event or the window.event object for IE browsers
+         evt = evt || window.event;
+
+         //If the target property exists we'll use that, otherwise we'll use srcElement instead.
+         var targ = evt.target || evt.srcElement;
+
+
+        //consider only the element that starts the event and not the one attached to the parent(#wrapper)
+        if (targ !== evt.currentTarget) {
+
+            //check whether the img or the caption has been clicked
+            var tname = targ.tagName;
+
+            //adding the "selected" class only if the image is being clicked, not if its caption is
+            if(tname === "IMG"){
+           
+              var selectedItem = targ;
+              var selectedImgURL = selectedItem.getAttribute('src');
+           
+              // Local storage doensn't work in Internet Explorer using the file:// protocol. It works once the project is loaded on a server
+              // The below window.localStorage will be "undefined" in IE. Hence the image selection won't be performed
+              if(typeof(window.localStorage) !== "undefined" ){
+
+                //remove the selected class if clicked on the same images
+                if(selectedItem.classList.contains('selected')){
+                   selectedItem.classList.remove('selected');
+                   localStorage.removeItem(selectedImgURL);
+
+                }
+                else{ //select clicked image 
+                   selectedItem.classList.add('selected');
+                   localStorage.setItem(selectedImgURL,'selected');
+                }
+
+              }
+            }
+          }
+        evt.stopPropagation();
+      }
+
+      // Check local storage if any images have been selected
+      function reimportSelectedItems(){
+
+        var imagesSelected = document.getElementsByTagName('img');
+
+        //loop through all the images and find those with the same src value - previously selected
+        for (var i=0; i<imagesSelected.length; i++){
+
+          var selectedStoreImage = imagesSelected[i].getAttribute('src');
+
+          //if an selected element is found then add the selected class
+          if (localStorage.getItem(selectedStoreImage) == 'selected') {
+            imagesSelected[i].classList.add('selected');
+          }
+        } 
+      }
+
+    }
+
+    //assign cb to the global variable 'cb'. Now it is accessible from outside
+    //if we don't expose our 'cb' function to the global 'window', it won't be accessible/visible outside the anonymous function.
+    window.cb = cb;
+
+    var tags='london';
+    var script=document.createElement('script');
+    script.src = 'http://api.flickr.com/services/feeds/photos_public.gne?format=json&jsoncallback=cb&tags='+tags;
+    document.head.appendChild(script);
+  })(); 
+
+
+</script>
+
+</head>
+
+<body>
+
+<h1>Flickr London Photo Gallery</h1>
+<h2>Select your pictures of choice</h2>
+<div id="wrapper"></div>
+
+</body>
+</html>
